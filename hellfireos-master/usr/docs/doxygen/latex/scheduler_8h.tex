@@ -1,0 +1,77 @@
+\hypertarget{scheduler_8h}{\section{sys/include/scheduler.h File Reference}
+\label{scheduler_8h}\index{sys/include/scheduler.\-h@{sys/include/scheduler.\-h}}
+}
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+void \hyperlink{scheduler_8h_a606ec5940ea75925046ae6ebb7657800}{dispatch\-\_\-isr} (void $\ast$arg)
+\begin{DoxyCompactList}\small\item\em The task dispatcher. \end{DoxyCompactList}\item 
+int32\-\_\-t \hyperlink{scheduler_8h_a52ecf98c89cb386c22223d19b1926202}{sched\-\_\-be} (void)
+\begin{DoxyCompactList}\small\item\em Best effort (B\-E) scheduler. \end{DoxyCompactList}\item 
+int32\-\_\-t \hyperlink{scheduler_8h_ae63de031dbb9678f4ed0a1ac3e82ef2e}{sched\-\_\-rt} (void)
+\begin{DoxyCompactList}\small\item\em Real time (R\-T) scheduler. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Function Documentation}
+\hypertarget{scheduler_8h_a606ec5940ea75925046ae6ebb7657800}{\index{scheduler.\-h@{scheduler.\-h}!dispatch\-\_\-isr@{dispatch\-\_\-isr}}
+\index{dispatch\-\_\-isr@{dispatch\-\_\-isr}!scheduler.h@{scheduler.\-h}}
+\subsubsection[{dispatch\-\_\-isr}]{\setlength{\rightskip}{0pt plus 5cm}void dispatch\-\_\-isr (
+\begin{DoxyParamCaption}
+\item[{void $\ast$}]{arg}
+\end{DoxyParamCaption}
+)}}\label{scheduler_8h_a606ec5940ea75925046ae6ebb7657800}
+
+
+The task dispatcher. 
+
+The job of the dispatcher is simple\-: save the current task context on the T\-C\-B, update its state to ready and check its stack for overflow. If there are tasks to be scheduled, process the delay queue and invoke the real-\/time scheduler. If no R\-T tasks are ready to be scheduled, invoke the best effort scheduler. Update the scheduled task state to running and restore the context of the task.
+
+Delayed tasks are in the delay queue, and are processed in the following way\-:
+\begin{DoxyItemize}
+\item The number of elements (tasks) in queue is counted;
+\item The a task from the head of the queue is removed and its delay is decremented;
+\begin{DoxyItemize}
+\item If the decremented delay of a task reaches 0, it is put on R\-T or B\-E run queue;
+\item It is put it back on the tail of the delay queue otherwise;
+\end{DoxyItemize}
+\item Repeat until the whole queue is processed; 
+\end{DoxyItemize}\hypertarget{scheduler_8h_a52ecf98c89cb386c22223d19b1926202}{\index{scheduler.\-h@{scheduler.\-h}!sched\-\_\-be@{sched\-\_\-be}}
+\index{sched\-\_\-be@{sched\-\_\-be}!scheduler.h@{scheduler.\-h}}
+\subsubsection[{sched\-\_\-be}]{\setlength{\rightskip}{0pt plus 5cm}int32\-\_\-t sched\-\_\-be (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+)}}\label{scheduler_8h_a52ecf98c89cb386c22223d19b1926202}
+
+
+Best effort (B\-E) scheduler. 
+
+\begin{DoxyReturn}{Returns}
+Best effort task id.
+\end{DoxyReturn}
+The algorithm is Lottery Scheduling.
+\begin{DoxyItemize}
+\item Take a task from the run queue, copy its entry and put it back at the tail of the run queue.
+\item If the task is in the blocked state (it may be simply blocked or waiting in a semaphore) or its not the ticket, it is put back at the tail of the run queue and the next task is picked up.
+\item So, if all tasks are blocked, at least the idle task can execute (it is never blocked, at least it is what we hope!).
+\item Tasks in the blocked state are never removed from the run queue (they are ignored), although they may be in another queue waiting for a resource. 
+\end{DoxyItemize}\hypertarget{scheduler_8h_ae63de031dbb9678f4ed0a1ac3e82ef2e}{\index{scheduler.\-h@{scheduler.\-h}!sched\-\_\-rt@{sched\-\_\-rt}}
+\index{sched\-\_\-rt@{sched\-\_\-rt}!scheduler.h@{scheduler.\-h}}
+\subsubsection[{sched\-\_\-rt}]{\setlength{\rightskip}{0pt plus 5cm}int32\-\_\-t sched\-\_\-rt (
+\begin{DoxyParamCaption}
+\item[{void}]{}
+\end{DoxyParamCaption}
+)}}\label{scheduler_8h_ae63de031dbb9678f4ed0a1ac3e82ef2e}
+
+
+Real time (R\-T) scheduler. 
+
+\begin{DoxyReturn}{Returns}
+Real time task id.
+\end{DoxyReturn}
+The scheduling algorithm is Rate Monotonic.
+\begin{DoxyItemize}
+\item Sort the queue of R\-T tasks by period;
+\item Update real time information (remaining deadline and capacity) of the whole task set.
+\item If the task at the head of the queue fits the requirements to be scheduled (not blocked, has jobs to execute and no task with higher priority according to R\-M was selected) then register the task to be scheduled. 
+\end{DoxyItemize}

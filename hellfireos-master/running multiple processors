@@ -1,0 +1,9 @@
+cd platform/noc_3x2/
+make clean
+nano makefile
+make images
+cp *.bin ~/Documents/hellfireos/usr/sim/mpsoc_sim/objects/ -f
+cd ../../
+cd usr/sim/mpsoc_sim/
+make noc_3x2    
+./mpsoc_sim 3 s

@@ -1,0 +1,30 @@
+
+KERNEL: booting...
+===========================================================
+HellfireOS v2.00 [Nov 11 2016, 10:34:51]
+Embedded Systems Group - GSE, PUCRS - [2007 - 2016]
+===========================================================
+
+arch:          mips/plasma
+sys clk:       25000 kHz
+time slice:    10480 us
+heap size:     500000 bytes
+max tasks:     30
+
+HAL: _vm_init()
+HAL: _sched_init()
+HAL: _irq_init()
+HAL: _timer_init()
+KERNEL: [idle task], id: 0, p:0, c:0, d:0, addr: 10001508, sp: 10005620, ss: 1024 bytes
+HAL: _device_init()
+KERNEL: this is core 2
+KERNEL: NoC queue init, 128 packets
+KERNEL: NoC driver registered
+HAL: _task_init()
+KERNEL: [slave], id: 1, p:0, c:0, d:0, addr: 100002ec, sp: 1000ac50, ss: 4096 bytes
+KERNEL: free heap: 476408 bytes
+KERNEL: HellfireOS is running
+
+estou esperando
+DataChunk.id: , Datachunk.data: 268500901
+Message Received ! From, CPU: 0 Task:3, EU SOU: 2
