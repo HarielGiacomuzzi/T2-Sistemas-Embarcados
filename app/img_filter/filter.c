@@ -1,6 +1,5 @@
 #include <hellfire.h>
 #include <noc.h>
-//#include <string.h>
 #include "image.h"
 
 typedef struct{
@@ -172,10 +171,32 @@ void putChunkInImage(int linha, int coluna, uint8_t *img, uint8_t *data){
 	for(i = linha; i < linha+33; i++){
 		for(j =coluna; j < coluna+33; j++){
 			img[width *i + j] = data[k++];
-			//temp[k++] = img[width * i + j];
 		}	
 	}
 	return temp;
+}
+
+void auxTask(){
+	int i,j;
+	if (hf_comm_create(hf_selfid(), 200, 0)){
+		printf("problema ao criar porta...");	
+		panic(0xff);
+	}
+	uint16_t cpu, task, size;
+	int buf[3];
+	int val;
+	uint8_t *img;
+	int8_t buff[1024];
+	//recebe configuracoes do processo
+	hf_recvack(&cpu, &task, buf, &size, 0);
+	hf_recvack(&cpu, &task, img, &size, 0);
+	// printf("i: %d  j: %d", buf[0], buf[1]);
+
+	 memcpy(buff, getChunkFromImage(i, j, img), 1024);
+	 val = hf_sendack(buf[3], 200,buff, sizeof(buff), 0, 1000);
+	 if (val) printf("sender, hf_sendack(): error %d\n", val);	
+	 hf_recvack(&cpu, &task, buff, &size, 0);
+	 putChunkInImage(buf[0], buf[1], img, buf);
 }
 
 void master(){
@@ -183,14 +204,16 @@ void master(){
 	int i = 0;
 	int k = 0;
 	int j = 0;
-	uint16_t cpu, task, val;
-	int8_t buf[1028];
+	uint16_t cpu, task, val, size;
+	int8_t *buf;
+	int buff[3];
 	Tuple memory[9];
 	uint8_t *img;
 	uint16_t totalPixels = width * height;
 	img = (uint8_t *) malloc(totalPixels);	
+	buf = (uint8_t *) malloc(totalPixels);	
 
-	if (hf_comm_create(hf_selfid(), 3, 0)){
+	if (hf_comm_create(hf_selfid(), 100, 0)){
 		printf("problema ao criar porta...");	
 		panic(0xff);
 	}
@@ -200,22 +223,41 @@ void master(){
 	while(1){
 		printf("\nvou mandar");
 		for(k = 1; k <= 8; k++){	
-			memcpy(buf, getChunkFromImage(i, j, img), 1024);
-			val = hf_sendack(k, k*100,buf, sizeof(buf), 0, 1000);
+			hf_spawn(auxTask, 0, 0, 0, "auxTask", 4096);
+			buff[0] = i;
+			buff[1] = j;
+			buff[2] = k;
+			//memcpy(buf, getChunkFromImage(i, j, img), 1024);
+			val = hf_sendack(hf_cpuid(), 200,buff, sizeof(buff), 0, 1000);
 			if (val) printf("sender, hf_sendack(): error %d\n", val);	
-			memory[k].i = i+=32;
-			memory[k].j = j+=32;
+			val = hf_sendack(hf_cpuid(), 200,&img, sizeof(uint8_t), 0, 1000);
+			if (val) printf("sender, hf_sendack(): error %d\n", val);	
+			memory[k].i = i;
+			memory[k].j = j;
+			i+=32;
+			if(i >= width){
+				j+=32;
+				i=0;
+			}
 		}
 		while(1){
-			hf_recvack(&cpu, &task, buf, 1024, 0);
+			hf_recvack(&cpu, &task, buf, &size, 0);
+			printf("Oi recebi algo!\n");
 			putChunkInImage(memory[cpu].i,memory[cpu].j,img, buf);
 			i += 32;
-			j += 32;
+			if(i >= width){
+				j+=32;
+				i=0;
+			}
+			if(i >= width && j >= height){
+				printf("\nResultado:\n0x%d,", img);
+				continue;
+			}
 			if(i < width && j < height){
 				memcpy(buf, getChunkFromImage(i,j,img), 1024);
-				hf_sendack(cpu, cpu*100, buf, sizeof(buf), 0, 1000);
-			}else{
-				printf("\nResultado:\n[%d]", img);
+				hf_sendack(cpu, 100, buf, sizeof(buf), 0, 1000);
+				memory[cpu].i = i;
+				memory[cpu].j = j;
 			}
 		}
 	}
@@ -223,15 +265,16 @@ void master(){
 
 void slave(){
 	
-	int8_t buf[1028];
-	uint16_t cpu, task, val;
+	int8_t buf[1024];
+	int val;
+	uint16_t cpu, task, size;
 	uint8_t data[1024];
 
 	if (hf_comm_create(hf_selfid(), hf_cpuid()*100, 0))
 		panic(0xff);
 
 	while(1){
-		val = hf_recvack(&cpu, &task, buf, 1024, 0);
+		val = hf_recvack(&cpu, &task, buf, &size, 0);
 			if (val){
 				printf("error %d\n", val);
 			}
@@ -239,7 +282,14 @@ void slave(){
 				memcpy(data, buf, 1024);
 				do_gausian(data, 32,32);
 				do_sobel(data, 32,32);
-				hf_sendack(cpu, 3, data, 0, 1024, 500);
+				printf("Ja terminei, vou mandar de volta\n");
+				val = 1;
+				while(val != 0){
+					int r = random() % 20;
+					delay_ms(r);
+					val = hf_sendack(cpu, hf_cpuid()*100, data, 1024, 0, 500);
+				}
+				//printf("%d\n", data);
 			}
 	}
 }
@@ -251,6 +301,7 @@ void app_main(void) {
 		hf_spawn(slave, 0, 0, 0, "slave", 16384);	
 	}
 }
+
 
 
 
